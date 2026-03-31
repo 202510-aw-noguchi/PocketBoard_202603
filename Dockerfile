@@ -7,7 +7,9 @@ RUN chmod +x ./mvnw
 RUN ./mvnw -B dependency:go-offline
 
 COPY src/ src/
-RUN ./mvnw -B -DskipTests package
+RUN ./mvnw -B -DskipTests clean package
+RUN jar xf target/*.jar META-INF/MANIFEST.MF \
+    && grep -q "Main-Class: org.springframework.boot.loader.launch.JarLauncher" META-INF/MANIFEST.MF
 
 FROM eclipse-temurin:17-jre AS runtime
 WORKDIR /app
