@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title th:text="#{app.title}">アクションアイテム</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --accent-weak: rgba(37, 99, 235, 0.08);
+      --danger: #b00020;
+      --danger-weak: #ffe3e3;
+      --warn: #8a6d00;
+      --warn-weak: #fff4cc;
+      --ok: #1b5e20;
+      --ok-weak: #e1f5e1;
+      --weather-icon-size: 44px;
+      --api-card-height: 110px;
+      --temp-label-size: 11px;
+      --temp-value-size: 13px;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "Noto Sans JP", system-ui, -apple-system, sans-serif;
+    }
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .header {
+      position: relative;
+      padding: 20px 24px;
+      background: transparent;
+      border-bottom: 1px solid var(--border);
+    }
+    .header .auth { max-width: 45%; }
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-logo {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0.02em;
+    }
+    .sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .auth {
+      position: absolute;
+      top: 18px;
+      right: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .auth strong { color: var(--text); }
+    .auth button {
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: 4px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .lang {
+      position: absolute;
+      bottom: 16px;
+      right: 24px;
+      display: flex;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .lang a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .shortcut-row {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .admin-link,
+    .quick-links {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .admin-link a,
+    .quick-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-weak);
+      color: var(--accent);
+      padding: 6px 10px;
+      border-radius: 5px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .info-section {
+      margin-top: 0;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+    .info-wrap {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: stretch;
+    }
+    .weather-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      width: 100%;
+      height: var(--api-card-height);
+      overflow: hidden;
+    }
+    .weather-title {
+      margin: 0 0 4px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .weather-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .weather-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--weather-icon-size);
+      height: var(--weather-icon-size);
+      border-radius: 10px;
+      color: var(--accent);
+      font-size: 28px;
+      line-height: 1;
+    }
+    .weather-icon.sunny {
+      color: #e53935;
+    }
+    .weather-values {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 12px;
+      font-size: 13px;
+    }
+    .weather-values.one-row {
+      grid-template-columns: 44px 1fr 1fr 1fr;
+      align-items: center;
+    }
+    .weather-icon-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .temp-stack {
+      display: grid;
+      grid-template-rows: auto auto;
+      gap: 2px;
+    }
+    .temp-label {
+      font-size: var(--temp-label-size);
+      color: var(--muted);
+    }
+    .temp-value {
+      font-size: var(--temp-value-size);
+      font-weight: 600;
+    }
+    .weather-note {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .weather-note.right {
+      margin-top: auto;
+      text-align: right;
+    }
+    .fx-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      width: 100%;
+      height: var(--api-card-height);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .fx-title {
+      margin: 0 0 6px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .fx-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .fx-values {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px 12px;
+      font-size: 13px;
+      margin-top: auto;
+    }
+    .fx-spacer {
+      height: var(--weather-icon-size);
+    }
+    .fx-label {
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .progress-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      width: 100%;
+      height: var(--api-card-height);
+      overflow: hidden;
+      display: flex;
+    }
+    .progress-title {
+      margin: 0 0 2px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .progress-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex: 1;
+      width: 100%;
+    }
+    .progress-left {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+    }
+    .progress-stats {
+      display: grid;
+      gap: 2px;
+      font-size: 11px;
+      line-height: 1.15;
+    }
+    .progress-stats strong {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .progress-donut {
+      height: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      background:
+        conic-gradient(#94a3b8 0 var(--not-started-end),
+                       #f59e0b var(--not-started-end) var(--in-progress-end),
+                       #14b8a6 var(--in-progress-end) 100%);
+      position: relative;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .progress-donut::after {
+      content: "";
+      position: absolute;
+      inset: 22px;
+      background: #fff;
+      border-radius: 50%;
+    }
+    .progress-donut span {
+      position: relative;
+      z-index: 1;
+    }
+    .progress-rate {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .card {
+      margin-top: 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      position: relative;
+    }
+    .card-actions {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .primary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      border-radius: 4px;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--accent);
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .filters input, .filters select {
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      border-radius: 3px;
+      background: #fff;
+    }
+    .action-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: #fff;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 12px;
+      line-height: 1.4;
+      cursor: pointer;
+    }
+    .board {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+    .board-column {
+      background: #fff;
+      border: 3px solid #dde3ec;
+      border-radius: 5px;
+      padding: 10px;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .board-column[data-status="NOT_STARTED"] {
+      border-color: #94a3b8;
+    }
+    .board-column[data-status="IN_PROGRESS"] {
+      border-color: #f59e0b;
+    }
+    .board-column[data-status="COMPLETED"] {
+      border-color: #14b8a6;
+    }
+    .board-column.drag-over {
+      border-color: #8aa2c6;
+      background: #e8eef6;
+    }
+    .board-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 44px;
+      margin: -10px -10px 0;
+      padding: 6px 8px;
+      border-radius: 3px 3px 0 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      overflow: hidden;
+    }
+    .board-header-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .board-header-title .action-button { white-space: nowrap; }
+    .board-count {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 600;
+    }
+    .board-column[data-status="NOT_STARTED"] .board-header {
+      background: #94a3b8;
+    }
+    .board-column[data-status="IN_PROGRESS"] .board-header {
+      background: #f59e0b;
+    }
+    .board-column[data-status="COMPLETED"] .board-header {
+      background: #14b8a6;
+    }
+    .board-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 30px;
+    }
+    .board-column.is-collapsed .board-list {
+      display: none;
+    }
+    .board-column.is-collapsed {
+      min-height: 0;
+      gap: 0;
+      padding-bottom: 0;
+    }
+    .todo-card {
+      background: #fff;
+      border: 3px solid var(--border);
+      border-radius: 4px;
+      padding: 10px;
+      cursor: grab;
+    }
+    .todo-card.dragging {
+      opacity: 0.55;
+      border-color: #9cb3d3;
+    }
+    .todo-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      line-height: 1.35;
+    }
+    .todo-line {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 3px;
+      line-height: 1.35;
+    }
+    .todo-line-flex {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+    .todo-head-line {
+      margin: -10px -10px 6px;
+      padding: 6px 8px;
+      border-radius: 3px 3px 0 0;
+      color: #fff;
+    }
+    .todo-line-pair {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .todo-detail {
+      color: #334155;
+      min-height: 28px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 8px 12px;
+      font-size: 13px;
+    }
+    .detail-grid dt {
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .detail-grid dd {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .priority-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .priority-high { background: var(--danger-weak); color: var(--danger); }
+    .priority-medium { background: var(--warn-weak); color: var(--warn); }
+    .priority-low { background: var(--ok-weak); color: var(--ok); }
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal.is-open { display: flex; }
+    .modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.4); }
+    .modal-dialog {
+      position: relative;
+      background: #fff;
+      padding: 16px 20px;
+      border-radius: 5px;
+      min-width: 280px;
+      max-width: 90vw;
+    }
+    .modal-title { margin: 0 0 8px; font-size: 18px; }
+    .modal-actions { margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end; }
+    .detail-modal-actions { justify-content: flex-start; }
+    .modal-close-x {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .modal-close-x:hover {
+      color: var(--text);
+    }
+
+    @media (max-width: 1025px) {
+      .header { padding: 16px 18px; }
+      .header-title { gap: 10px; }
+      .header-logo { width: 40px; height: 40px; }
+      h1 { font-size: 22px; }
+      .header .auth { max-width: 50%; }
+      .info-section {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .weather-card,
+      .fx-card,
+      .progress-card {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 750px) {
+      .header {
+        display: grid;
+        grid-template-columns: 1fr;
+        row-gap: 10px;
+      }
+      .header-title {
+        justify-content: center;
+        text-align: center;
+      }
+      .header .auth {
+        position: static;
+        justify-content: center;
+        max-width: 100%;
+      }
+      .lang {
+        position: static;
+        justify-content: center;
+      }
+      .shortcut-row,
+      .quick-links,
+      .admin-link {
+        justify-content: center;
+      }
+      .info-section {
+        grid-template-columns: 1fr;
+        width: 100%;
+        max-width: 360px;
+        margin: 0 auto;
+      }
+      .info-wrap {
+        justify-content: center;
+      }
+      .weather-card,
+      .fx-card,
+      .progress-card {
+        text-align: center;
+      }
+      .weather-meta,
+      .weather-values,
+      .fx-meta,
+      .fx-values {
+        justify-content: center;
+      }
+      .weather-values,
+      .fx-values {
+        place-items: center;
+      }
+      .weather-values.one-row {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+      }
+      .weather-icon-wrap {
+        justify-content: center;
+      }
+      .progress-content {
+        justify-content: center;
+        gap: 14px;
+      }
+      .progress-left {
+        align-items: center;
+      }
+      .progress-stats {
+        justify-items: center;
+      }
+      .board {
+        grid-template-columns: 1fr;
+      }
+      .board-header {
+        justify-content: center;
+        gap: 10px;
+        cursor: pointer;
+        position: relative;
+        padding-right: 28px;
+      }
+      .board-header::after {
+        content: "▼";
+        font-size: 2em;
+        line-height: 1;
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .board-column.is-collapsed .board-header::after {
+        content: "▼";
+      }
+      .board-column:not(.is-collapsed) .board-header::after {
+        content: "▲";
+      }
+      .card-actions {
+        position: static;
+        justify-content: center;
+        margin-bottom: 8px;
+      }
+      .filters {
+        clear: both;
+        justify-content: center;
+        flex-wrap: nowrap;
+        align-items: center;
+      }
+      .filters input[name="keyword"] {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 220px;
+      }
+      .filters select {
+        flex: 0 0 110px;
+        width: 110px;
+      }
+      .filters button.action-button {
+        flex: 0 0 auto;
+      }
+      .filters a.action-button {
+        flex: 0 0 auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div class="header-title">
+        <img class="header-logo" src="/images/animal_hashibirokou.png" alt="アイコン" />
+        <div>
+          <h1 th:text="#{app.title}">アクションアイテム</h1>
+          <div class="sub">Task Overview</div>
+        </div>
+      </div>
+
+      <div class="auth" sec:authorize="isAuthenticated()">
+        <span><span th:text="#{label.loggedIn}">ログイン中</span>: <strong sec:authentication="name">user</strong></span>
+        <form th:action="@{/logout}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+          <button type="submit" th:text="#{action.logout}">ログアウト</button>
+        </form>
+      </div>
+
+      <div class="lang">
+        <a th:href="@{/(lang='ja')}">JA</a>
+        <a th:href="@{/(lang='en')}">EN</a>
+      </div>
+    </div>
+
+    <div class="shortcut-row">
+      <div class="quick-links">
+        <a th:href="@{/gantt}" th:text="#{action.resourceLeveling}">リソースレベリング</a>
+      </div>
+      <div class="admin-link" sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/admin}" th:text="#{action.adminPage}">管理画面</a>
+      </div>
+    </div>
+
+    <div class="info-wrap">
+      <div class="info-section">
+        <div class="weather-card" th:attr="data-city=#{weather.city.tokyo}" data-lat="35.6895" data-lon="139.692" aria-live="polite">
+          <p class="weather-title" th:text="${#messages.msg('weather.todayInPrefix') + #messages.msg('weather.city.tokyo')}">今日の東京</p>
+          <div class="weather-meta" th:text="#{label.loading}">読み込み中...</div>
+        </div>
+        <div class="weather-card" th:attr="data-city=#{weather.city.kyoto}" data-lat="35.0211" data-lon="135.754" aria-live="polite">
+          <p class="weather-title" th:text="${#messages.msg('weather.todayInPrefix') + #messages.msg('weather.city.kyoto')}">今日の京都</p>
+          <div class="weather-meta" th:text="#{label.loading}">読み込み中...</div>
+        </div>
+        <div class="fx-card" id="fx-card" aria-live="polite">
+          <p class="fx-title" th:text="#{fx.title}">為替</p>
+          <div class="fx-meta" th:text="#{label.loading}">読み込み中...</div>
+        </div>
+        <div class="progress-card" aria-live="polite">
+          <div class="progress-content"
+               th:style="'--not-started-end:' + ${monthlyNotStartedEnd} + '%; --in-progress-end:' + ${monthlyInProgressEnd} + '%;'">
+            <div class="progress-left">
+              <p class="progress-title" th:text="#{progress.title}">当月進捗</p>
+              <div class="progress-stats">
+                <div>
+                  <span class="legend-dot" style="background:#94a3b8;"></span>
+                  <span th:text="#{status.NOT_STARTED}">未着手</span> <strong th:text="${monthlyNotStartedCount}">0</strong>
+                </div>
+                <div>
+                  <span class="legend-dot" style="background:#f59e0b;"></span>
+                  <span th:text="#{status.IN_PROGRESS}">対応中</span> <strong th:text="${monthlyInProgressCount}">0</strong>
+                </div>
+                <div>
+                  <span class="legend-dot" style="background:#14b8a6;"></span>
+                  <span th:text="#{status.COMPLETED}">完了</span> <strong th:text="${monthlyCompletedCount}">0</strong>
+                </div>
+              </div>
+            </div>
+            <div class="progress-donut" role="img" th:attr="aria-label=#{progress.title}">
+              <span class="progress-rate" th:text="${monthlyCompletedRateText} + '%'">0.0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card">
+      <div class="card-actions">
+        <a th:href="@{/create}" class="primary-button" th:text="#{action.new}">新規登録</a>
+      </div>
+      <form th:action="@{/}" method="get" class="filters">
+        <input type="text" name="keyword" th:value="${keyword}" th:placeholder="#{label.keywordPlaceholder}" />
+        <select name="categoryId">
+          <option value="" th:text="#{label.categoryPlaceholder}">カテゴリ</option>
+          <option th:each="c : ${categories}"
+                  th:value="${c.id}"
+                  th:selected="${c.id} == ${categoryId}"
+                  th:text="${c.name}">カテゴリ</option>
+        </select>
+        <input type="hidden" name="sort" value="createdAt" />
+        <input type="hidden" name="dir" value="desc" />
+        <input type="hidden" name="includeCompleted" value="true" />
+        <input type="hidden" name="showAllCompleted" th:value="${showAllCompletedCards}" />
+        <button type="submit" class="action-button" th:text="#{action.search}">検索</button>
+        <a th:if="${keyword} or ${categoryId}" th:href="@{/}" class="action-button" th:text="#{action.clear}">クリア</a>
+      </form>
+
+      <div th:if="${#lists.isEmpty(todos)}">
+        <p th:text="#{label.none}">データはありません</p>
+      </div>
+
+      <div class="board" th:if="${!#lists.isEmpty(todos)}">
+        <section class="board-column" data-status="NOT_STARTED">
+          <div class="board-header"><span th:text="#{status.NOT_STARTED}">未着手</span><span class="board-count">0</span></div>
+          <div class="board-list">
+            <article class="todo-card"
+                     th:each="todo : ${todos}"
+                     th:if="${todo.status == null or todo.status.name() == 'NOT_STARTED'}"
+                     th:attr="data-id=${todo.id},
+                              data-title=${todo.title},
+                              data-group=${todo.categoryName != null ? todo.categoryName : #messages.msg('label.notSet')},
+                              data-priority=${#locale.language == 'en' ? (todo.priority.name() == 'HIGH' ? 'H' : (todo.priority.name() == 'LOW' ? 'L' : 'M')) : #messages.msg('priority.' + todo.priority.name())},
+                              data-deadline=${todo.deadline != null ? #temporals.format(todo.deadline, 'yyyy-MM-dd') : '-'},
+                              data-status=${todo.status != null ? #messages.msg('status.' + todo.status.name()) : #messages.msg('status.NOT_STARTED')},
+                              data-assignee=${todo.assignee != null and !#strings.isEmpty(todo.assignee) ? todo.assignee : '-'},
+                              data-detail=${todo.detail != null ? todo.detail : ''}"
+                     th:style="'border-color:' + (${todo.categoryColor} ?: '#e5e7eb') + ';'"
+                     draggable="true">
+              <div class="todo-line todo-line-flex todo-head-line"
+                   th:style="'background:' + (${todo.categoryColor} ?: '#94a3b8') + ';'">
+                <span th:text="${todo.categoryName != null ? todo.categoryName : #messages.msg('label.notSet')}">未設定</span>
+                <span th:text="${#locale.language == 'en' ? (todo.priority.name() == 'HIGH' ? 'H' : (todo.priority.name() == 'LOW' ? 'L' : 'M')) : #messages.msg('priority.' + todo.priority.name())}"
+                      th:classappend="${todo.priority.name() == 'HIGH'} ? 'priority-badge priority-high' :
+                                      (${todo.priority.name() == 'LOW'} ? 'priority-badge priority-low' : 'priority-badge priority-medium')">中</span>
+              </div>
+              <div class="todo-title" th:text="${todo.title}">title</div>
+              <div class="todo-line todo-detail"
+                   th:text="${todo.detail != null and #strings.length(todo.detail) > 50 ? #strings.substring(todo.detail, 0, 50) + '...' : (todo.detail != null ? todo.detail : '')}">
+                detail
+              </div>
+              <div class="todo-line todo-line-pair">
+                <span th:text="#{label.deadlinePrefix} + ${todo.deadline != null ? #temporals.format(todo.deadline, 'yyyy-MM-dd') : '-'}">期限: -</span>
+                <span th:text="${todo.status != null ? #messages.msg('status.' + todo.status.name()) : #messages.msg('status.NOT_STARTED')}">未着手</span>
+              </div>
+              <div class="todo-line" th:text="#{label.assigneePrefix} + ${todo.assignee != null and !#strings.isEmpty(todo.assignee) ? todo.assignee : '-'}">担当: -</div>
+              <div class="todo-line" th:if="${attachmentsMap != null and attachmentsMap[todo.id] != null}">
+                <a th:each="a : ${attachmentsMap[todo.id]}"
+                   th:href="@{/attachments/{id}/download(id=${a.id})}"
+                   th:text="${a.originalFilename}"
+                   style="margin-right:6px;">file</a>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="board-column" data-status="IN_PROGRESS">
+          <div class="board-header"><span th:text="#{status.IN_PROGRESS}">対応中</span><span class="board-count">0</span></div>
+          <div class="board-list">
+            <article class="todo-card"
+                     th:each="todo : ${todos}"
+                     th:if="${todo.status != null and todo.status.name() == 'IN_PROGRESS'}"
+                     th:attr="data-id=${todo.id},
+                              data-title=${todo.title},
+                              data-group=${todo.categoryName != null ? todo.categoryName : #messages.msg('label.notSet')},
+                              data-priority=${#locale.language == 'en' ? (todo.priority.name() == 'HIGH' ? 'H' : (todo.priority.name() == 'LOW' ? 'L' : 'M')) : #messages.msg('priority.' + todo.priority.name())},
+                              data-deadline=${todo.deadline != null ? #temporals.format(todo.deadline, 'yyyy-MM-dd') : '-'},
+                              data-status=${todo.status != null ? #messages.msg('status.' + todo.status.name()) : #messages.msg('status.NOT_STARTED')},
+                              data-assignee=${todo.assignee != null and !#strings.isEmpty(todo.assignee) ? todo.assignee : '-'},
+                              data-detail=${todo.detail != null ? todo.detail : ''}"
+                     th:style="'border-color:' + (${todo.categoryColor} ?: '#e5e7eb') + ';'"
+                     draggable="true">
+              <div class="todo-line todo-line-flex todo-head-line"
+                   th:style="'background:' + (${todo.categoryColor} ?: '#94a3b8') + ';'">
+                <span th:text="${todo.categoryName != null ? todo.categoryName : #messages.msg('label.notSet')}">未設定</span>
+                <span th:text="${#locale.language == 'en' ? (todo.priority.name() == 'HIGH' ? 'H' : (todo.priority.name() == 'LOW' ? 'L' : 'M')) : #messages.msg('priority.' + todo.priority.name())}"
+                      th:classappend="${todo.priority.name() == 'HIGH'} ? 'priority-badge priority-high' :
+                                      (${todo.priority.name() == 'LOW'} ? 'priority-badge priority-low' : 'priority-badge priority-medium')">中</span>
+              </div>
+              <div class="todo-title" th:text="${todo.title}">title</div>
+              <div class="todo-line todo-detail"
+                   th:text="${todo.detail != null and #strings.length(todo.detail) > 50 ? #strings.substring(todo.detail, 0, 50) + '...' : (todo.detail != null ? todo.detail : '')}">
+                detail
+              </div>
+              <div class="todo-line todo-line-pair">
+                <span th:text="#{label.deadlinePrefix} + ${todo.deadline != null ? #temporals.format(todo.deadline, 'yyyy-MM-dd') : '-'}">期限: -</span>
+                <span th:text="${todo.status != null ? #messages.msg('status.' + todo.status.name()) : #messages.msg('status.NOT_STARTED')}">対応中</span>
+              </div>
+              <div class="todo-line" th:text="#{label.assigneePrefix} + ${todo.assignee != null and !#strings.isEmpty(todo.assignee) ? todo.assignee : '-'}">担当: -</div>
+              <div class="todo-line" th:if="${attachmentsMap != null and attachmentsMap[todo.id] != null}">
+                <a th:each="a : ${attachmentsMap[todo.id]}"
+                   th:href="@{/attachments/{id}/download(id=${a.id})}"
+                   th:text="${a.originalFilename}"
+                   style="margin-right:6px;">file</a>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="board-column" data-status="COMPLETED">
+          <div class="board-header">
+            <span class="board-header-title">
+              <span th:text="#{status.COMPLETED}">完了</span>
+              <span class="board-count">0</span>
+              <a th:if="${showAllCompletedCards}"
+                 th:href="@{/(keyword=${keyword}, categoryId=${categoryId}, includeCompleted=${includeCompleted}, showAllCompleted=false, sort='createdAt', dir='desc')}"
+                 class="action-button" th:text="#{action.hideCompletedItems}">完了アイテムを非表示</a>
+              <a th:unless="${showAllCompletedCards}"
+                 th:href="@{/(keyword=${keyword}, categoryId=${categoryId}, includeCompleted=${includeCompleted}, showAllCompleted=true, sort='createdAt', dir='desc')}"
+                 class="action-button" th:text="#{action.showAll}">すべて表示</a>
+            </span>
+          </div>
+          <div class="board-list">
+            <article class="todo-card"
+                     th:each="todo : ${todos}"
+                     th:if="${todo.status != null and todo.status.name() == 'COMPLETED'}"
+                     th:attr="data-id=${todo.id},
+                              data-title=${todo.title},
+                              data-group=${todo.categoryName != null ? todo.categoryName : #messages.msg('label.notSet')},
+                              data-priority=${#locale.language == 'en' ? (todo.priority.name() == 'HIGH' ? 'H' : (todo.priority.name() == 'LOW' ? 'L' : 'M')) : #messages.msg('priority.' + todo.priority.name())},
+                              data-deadline=${todo.deadline != null ? #temporals.format(todo.deadline, 'yyyy-MM-dd') : '-'},
+                              data-status=${todo.status != null ? #messages.msg('status.' + todo.status.name()) : #messages.msg('status.NOT_STARTED')},
+                              data-assignee=${todo.assignee != null and !#strings.isEmpty(todo.assignee) ? todo.assignee : '-'},
+                              data-detail=${todo.detail != null ? todo.detail : ''}"
+                     th:style="'border-color:' + (${todo.categoryColor} ?: '#e5e7eb') + ';'"
+                     draggable="true">
+              <div class="todo-line todo-line-flex todo-head-line"
+                   th:style="'background:' + (${todo.categoryColor} ?: '#94a3b8') + ';'">
+                <span th:text="${todo.categoryName != null ? todo.categoryName : #messages.msg('label.notSet')}">未設定</span>
+                <span th:text="${#locale.language == 'en' ? (todo.priority.name() == 'HIGH' ? 'H' : (todo.priority.name() == 'LOW' ? 'L' : 'M')) : #messages.msg('priority.' + todo.priority.name())}"
+                      th:classappend="${todo.priority.name() == 'HIGH'} ? 'priority-badge priority-high' :
+                                      (${todo.priority.name() == 'LOW'} ? 'priority-badge priority-low' : 'priority-badge priority-medium')">中</span>
+              </div>
+              <div class="todo-title" th:text="${todo.title}">title</div>
+              <div class="todo-line todo-detail"
+                   th:text="${todo.detail != null and #strings.length(todo.detail) > 50 ? #strings.substring(todo.detail, 0, 50) + '...' : (todo.detail != null ? todo.detail : '')}">
+                detail
+              </div>
+              <div class="todo-line todo-line-pair">
+                <span th:text="#{label.deadlinePrefix} + ${todo.deadline != null ? #temporals.format(todo.deadline, 'yyyy-MM-dd') : '-'}">期限: -</span>
+                <span th:text="${todo.status != null ? #messages.msg('status.' + todo.status.name()) : #messages.msg('status.NOT_STARTED')}">完了</span>
+              </div>
+              <div class="todo-line" th:text="#{label.assigneePrefix} + ${todo.assignee != null and !#strings.isEmpty(todo.assignee) ? todo.assignee : '-'}">担当: -</div>
+              <div class="todo-line" th:if="${attachmentsMap != null and attachmentsMap[todo.id] != null}">
+                <a th:each="a : ${attachmentsMap[todo.id]}"
+                   th:href="@{/attachments/{id}/download(id=${a.id})}"
+                   th:text="${a.originalFilename}"
+                   style="margin-right:6px;">file</a>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+
+    </div>
+
+    <div id="detail-modal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-modal-title">
+      <button type="button" id="detail-close-x" class="modal-close-x" th:attr="aria-label=#{action.close}" aria-label="閉じる">×</button>
+      <h2 id="detail-modal-title" class="modal-title" th:text="#{modal.detailTitle}">ToDo詳細</h2>
+      <dl class="detail-grid">
+        <dt th:text="#{label.category}">グループ</dt><dd id="detail-group">-</dd>
+        <dt th:text="#{label.priority}">重要度</dt><dd id="detail-priority">-</dd>
+        <dt th:text="#{label.deadline}">期限</dt><dd id="detail-deadline">-</dd>
+        <dt th:text="#{label.status}">状態</dt><dd id="detail-status">-</dd>
+        <dt th:text="#{label.assignee}">担当者</dt><dd id="detail-assignee">-</dd>
+        <dt th:text="#{label.detail}">詳細</dt><dd id="detail-description">-</dd>
+      </dl>
+      <div class="modal-actions detail-modal-actions">
+        <a id="detail-edit" href="#" class="action-button" th:text="#{action.edit}">編集</a>
+        <button type="button" id="detail-delete" class="action-button" th:text="#{action.delete}">削除</button>
+      </div>
+    </div>
+    </div>
+
+    <div id="delete-modal" class="modal" aria-hidden="true"
+         th:attr="data-title=#{modal.deleteTitle},data-message=#{modal.deleteMessage}">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+      <h2 id="delete-modal-title" class="modal-title" th:text="#{modal.deleteTitle}">削除確認</h2>
+      <p th:text="#{modal.deleteMessage}">本当に削除しますか？</p>
+      <div class="modal-actions">
+        <button type="button" id="delete-ok" th:text="#{action.ok}">OK</button>
+        <button type="button" id="delete-cancel" th:text="#{action.cancel}">キャンセル</button>
+      </div>
+    </div>
+    </div>
+    <form id="delete-form" method="post">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    </form>
+
+    <script>
+    (function () {
+      var modal = document.getElementById('delete-modal');
+      var ok = document.getElementById('delete-ok');
+      var cancel = document.getElementById('delete-cancel');
+      var deleteForm = document.getElementById('delete-form');
+      var targetAction = null;
+
+      function openModal(action) {
+        targetAction = action;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        var modalTitle = modal.getAttribute('data-title');
+        var modalMessage = modal.getAttribute('data-message');
+        if (modalTitle) {
+          document.getElementById('delete-modal-title').textContent = modalTitle;
+        }
+        if (modalMessage) {
+          var p = modal.querySelector('p');
+          if (p) p.textContent = modalMessage;
+        }
+      }
+
+      function closeModal() {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        targetAction = null;
+      }
+
+      document.querySelectorAll('.delete-button').forEach(function (button) {
+        button.addEventListener('click', function () {
+          openModal(button.getAttribute('data-action'));
+        });
+      });
+      window.openDeleteModal = openModal;
+
+      ok.addEventListener('click', function () {
+        if (targetAction) {
+          deleteForm.setAttribute('action', targetAction);
+          deleteForm.submit();
+        }
+        closeModal();
+      });
+
+      cancel.addEventListener('click', function () {
+        closeModal();
+      });
+
+      modal.querySelector('.modal-backdrop').addEventListener('click', function () {
+        closeModal();
+      });
+    })();
+    </script>
+
+    <script th:inline="javascript">
+    (function () {
+      var csrfParam = '[[${_csrf.parameterName}]]';
+      var csrfToken = '[[${_csrf.token}]]';
+      var countSuffix = /*[[#{label.countSuffix}]]*/ '件';
+      var detailDefaultTitle = /*[[#{modal.detailTitle}]]*/ 'ToDo詳細';
+      var statusUpdateFailedMessage = /*[[#{alert.statusUpdateFailed}]]*/ 'ステータス更新に失敗しました';
+      var draggingCard = null;
+      var suppressClickOnce = false;
+      var columns = document.querySelectorAll('.board-column');
+      var wasMobile = window.matchMedia('(max-width: 750px)').matches;
+      var detailModal = document.getElementById('detail-modal');
+      var detailCloseX = document.getElementById('detail-close-x');
+      var detailEdit = document.getElementById('detail-edit');
+      var detailDelete = document.getElementById('detail-delete');
+      var detailTitle = document.getElementById('detail-modal-title');
+      var detailGroup = document.getElementById('detail-group');
+      var detailPriority = document.getElementById('detail-priority');
+      var detailDeadline = document.getElementById('detail-deadline');
+      var detailStatus = document.getElementById('detail-status');
+      var detailAssignee = document.getElementById('detail-assignee');
+      var detailDescription = document.getElementById('detail-description');
+      var currentDetailId = null;
+
+      function openDetailModal(card) {
+        if (!detailModal || !card) return;
+        detailTitle.textContent = card.getAttribute('data-title') || detailDefaultTitle;
+        detailGroup.textContent = card.getAttribute('data-group') || '-';
+        detailPriority.textContent = card.getAttribute('data-priority') || '-';
+        detailDeadline.textContent = card.getAttribute('data-deadline') || '-';
+        detailStatus.textContent = card.getAttribute('data-status') || '-';
+        detailAssignee.textContent = card.getAttribute('data-assignee') || '-';
+        detailDescription.textContent = card.getAttribute('data-detail') || '-';
+        currentDetailId = card.getAttribute('data-id');
+        if (detailEdit) {
+          detailEdit.setAttribute('href', '/revision/' + encodeURIComponent(currentDetailId || ''));
+        }
+        detailModal.classList.add('is-open');
+        detailModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeDetailModal() {
+        if (!detailModal) return;
+        detailModal.classList.remove('is-open');
+        detailModal.setAttribute('aria-hidden', 'true');
+        currentDetailId = null;
+      }
+
+      function refreshCounts() {
+        columns.forEach(function (col) {
+          var countEl = col.querySelector('.board-count');
+          var list = col.querySelector('.board-list');
+          if (!countEl || !list) return;
+          countEl.textContent = list.querySelectorAll('.todo-card').length + countSuffix;
+        });
+      }
+
+      function isMobileBoard() {
+        return window.matchMedia('(max-width: 750px)').matches;
+      }
+
+      function applyAccordionLayout(resetState) {
+        var mobile = isMobileBoard();
+        if (mobile) {
+          if (resetState) {
+            columns.forEach(function (col) {
+              col.classList.add('is-collapsed');
+            });
+          }
+        } else if (resetState) {
+          columns.forEach(function (col) {
+            col.classList.remove('is-collapsed');
+          });
+        }
+        wasMobile = mobile;
+      }
+
+      function bindDragHandlers(card) {
+        card.addEventListener('dragstart', function (e) {
+          draggingCard = card;
+          card.classList.add('dragging');
+          if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', card.getAttribute('data-id') || '');
+          }
+        });
+        card.addEventListener('dragend', function () {
+          card.classList.remove('dragging');
+          draggingCard = null;
+          suppressClickOnce = true;
+          setTimeout(function () { suppressClickOnce = false; }, 120);
+          document.querySelectorAll('.board-column').forEach(function (col) { col.classList.remove('drag-over'); });
+        });
+      }
+
+      function bindDetailHandlers(card) {
+        card.addEventListener('click', function (e) {
+          if (suppressClickOnce) {
+            return;
+          }
+          if (e.target.closest('a,button,input,textarea,select,label,form')) {
+            return;
+          }
+          openDetailModal(card);
+        });
+      }
+
+      document.querySelectorAll('.todo-card').forEach(function (card) {
+        bindDragHandlers(card);
+        bindDetailHandlers(card);
+      });
+
+      columns.forEach(function (column) {
+        var header = column.querySelector('.board-header');
+        if (!header) return;
+        header.addEventListener('click', function (e) {
+          if (!isMobileBoard()) return;
+          if (e.target.closest('a,button,input,textarea,select,label,form')) return;
+          var opening = column.classList.contains('is-collapsed');
+          if (opening) {
+            columns.forEach(function (other) {
+              if (other !== column) other.classList.add('is-collapsed');
+            });
+            column.classList.remove('is-collapsed');
+          } else {
+            column.classList.add('is-collapsed');
+          }
+        });
+      });
+
+      applyAccordionLayout(true);
+      window.addEventListener('resize', function () {
+        var mobile = isMobileBoard();
+        if (mobile !== wasMobile) {
+          applyAccordionLayout(true);
+        }
+      });
+
+      if (detailCloseX) {
+        detailCloseX.addEventListener('click', closeDetailModal);
+      }
+      if (detailDelete) {
+        detailDelete.addEventListener('click', function () {
+          if (!currentDetailId) return;
+          closeDetailModal();
+          if (typeof window.openDeleteModal === 'function') {
+            window.openDeleteModal('/delete/' + encodeURIComponent(currentDetailId));
+          }
+        });
+      }
+      if (detailModal) {
+        var detailBackdrop = detailModal.querySelector('.modal-backdrop');
+        if (detailBackdrop) {
+          detailBackdrop.addEventListener('click', closeDetailModal);
+        }
+      }
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && detailModal && detailModal.classList.contains('is-open')) {
+          closeDetailModal();
+        }
+      });
+
+      columns.forEach(function (column) {
+        column.addEventListener('dragover', function (e) {
+          e.preventDefault();
+          column.classList.add('drag-over');
+        });
+        column.addEventListener('dragleave', function () {
+          column.classList.remove('drag-over');
+        });
+        column.addEventListener('drop', function (e) {
+          e.preventDefault();
+          column.classList.remove('drag-over');
+          if (!draggingCard) return;
+
+          var targetStatus = column.getAttribute('data-status');
+          var fromColumn = draggingCard.closest('.board-column');
+          var fromStatus = fromColumn ? fromColumn.getAttribute('data-status') : null;
+          if (!targetStatus || fromStatus === targetStatus) return;
+
+          var list = column.querySelector('.board-list');
+          if (!list) return;
+          list.appendChild(draggingCard);
+          refreshCounts();
+
+          var todoId = draggingCard.getAttribute('data-id');
+          fetch('/' + encodeURIComponent(todoId) + '/status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+              'X-CSRF-TOKEN': csrfToken
+            },
+            body: encodeURIComponent(csrfParam) + '=' + encodeURIComponent(csrfToken) +
+              '&status=' + encodeURIComponent(targetStatus)
+          }).then(function (res) {
+            if (!res.ok) {
+              throw new Error('status update failed: ' + res.status);
+            }
+            window.location.reload();
+          }).catch(function (err) {
+            if (fromColumn) {
+              var fromList = fromColumn.querySelector('.board-list');
+              if (fromList) {
+                fromList.appendChild(draggingCard);
+              }
+            }
+            refreshCounts();
+            alert(statusUpdateFailedMessage + ' (' + (err && err.message ? err.message : 'unknown') + ')');
+          });
+        });
+      });
+      refreshCounts();
+    })();
+    </script>
+
+    <script th:inline="javascript">
+      (function () {
+        var cards = document.querySelectorAll('.weather-card');
+        var timezone = 'Asia/Tokyo';
+        var dailyParams = 'temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode';
+        var weatherTitlePrefix = /*[[#{weather.todayInPrefix}]]*/ '今日の';
+        var weatherErrorMessage = /*[[#{weather.error}]]*/ '天気情報を取得できませんでした';
+        var weatherMaxTempLabel = /*[[#{weather.maxTemp}]]*/ '最高気温';
+        var weatherMinTempLabel = /*[[#{weather.minTemp}]]*/ '最低気温';
+        var weatherPrecipLabel = /*[[#{weather.precip}]]*/ '降水確率';
+
+        function renderError(card, message) {
+          card.innerHTML = '<p class="weather-title">' + card.dataset.city + '</p>' +
+            '<div class="weather-meta">' + message + '</div>';
+        }
+
+        cards.forEach(function (card) {
+          var lat = card.dataset.lat;
+          var lon = card.dataset.lon;
+          var url = 'https://api.open-meteo.com/v1/forecast' +
+            '?latitude=' + encodeURIComponent(lat) +
+            '&longitude=' + encodeURIComponent(lon) +
+            '&daily=' + encodeURIComponent(dailyParams) +
+            '&timezone=' + encodeURIComponent(timezone) +
+            '&forecast_days=1';
+
+          fetch(url)
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+              if (!data || !data.daily || !data.daily.time || !data.daily.time.length) {
+                renderError(card, weatherErrorMessage);
+                return;
+              }
+              var max = data.daily.temperature_2m_max[0];
+              var min = data.daily.temperature_2m_min[0];
+              var pop = data.daily.precipitation_probability_max[0];
+              var code = data.daily.weathercode ? data.daily.weathercode[0] : null;
+              var iconData = weatherIcon(code);
+              card.innerHTML =
+                '<p class="weather-title">' + weatherTitlePrefix + card.dataset.city + '</p>' +
+                '<div class="weather-values one-row">' +
+                '<div class="weather-icon-wrap"><span class="weather-icon' + iconData.className + '" aria-hidden="true">' + iconData.icon + '</span></div>' +
+                '<div class="temp-stack"><div class="temp-label">' + weatherMaxTempLabel + '</div><div class="temp-value">' + max + '℃</div></div>' +
+                '<div class="temp-stack"><div class="temp-label">' + weatherMinTempLabel + '</div><div class="temp-value">' + min + '℃</div></div>' +
+                '<div class="temp-stack"><div class="temp-label">' + weatherPrecipLabel + '</div><div class="temp-value">' + pop + '%</div></div>' +
+                '</div>' +
+                '<div class="weather-note right">Data: Open-Meteo</div>';
+            })
+            .catch(function () {
+              renderError(card, weatherErrorMessage);
+            });
+        });
+
+        function weatherIcon(code) {
+          if (code === null || typeof code === 'undefined') {
+            return { icon: '？', label: 'Unknown', className: '' };
+          }
+          if (code === 0) return { icon: '☀', label: 'Clear', className: ' sunny' };
+          if (code === 1) return { icon: '🌤', label: 'Mainly clear', className: '' };
+          if (code === 2) return { icon: '⛅', label: 'Partly cloudy', className: '' };
+          if (code === 3) return { icon: '☁', label: 'Cloudy', className: '' };
+          if (code === 45 || code === 48) return { icon: '🌫', label: 'Fog', className: '' };
+          if (code === 51 || code === 53 || code === 55 || code === 56 || code === 57) return { icon: '🌦', label: 'Drizzle', className: '' };
+          if (code === 61 || code === 63 || code === 65 || code === 66 || code === 67) return { icon: '🌧', label: 'Rain', className: '' };
+          if (code === 71 || code === 73 || code === 75 || code === 77 || code === 85 || code === 86) return { icon: '❄', label: 'Snow', className: '' };
+          if (code === 80 || code === 81 || code === 82) return { icon: '🌧', label: 'Showers', className: '' };
+          if (code === 95 || code === 96 || code === 99) return { icon: '⛈', label: 'Thunderstorm', className: '' };
+          return { icon: '？', label: 'Unknown', className: '' };
+        }
+      })();
+    </script>
+
+
+    <script th:inline="javascript">
+      (function () {
+        var card = document.getElementById('fx-card');
+        var url = 'https://api.frankfurter.dev/v1/latest?base=JPY&symbols=USD,EUR';
+        var fxTitle = /*[[#{fx.title}]]*/ '為替';
+        var fxError = /*[[#{fx.error}]]*/ '為替情報を取得できませんでした';
+        var fxUpdated = /*[[#{fx.updated}]]*/ '更新日';
+
+        function renderError() {
+          card.innerHTML =
+            '<p class="fx-title">' + fxTitle + '</p>' +
+            '<div class="fx-meta">' + fxError + '</div>';
+        }
+
+        fetch(url)
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (!data || !data.rates) {
+              renderError();
+              return;
+            }
+                // Frankfurter base=JPY returns USD per JPY.
+                var jpyUsd = data.rates.USD; // JPY -> USD
+                var jpyEur = data.rates.EUR; // JPY -> EUR
+                var usdJpy = jpyUsd ? (1 / jpyUsd) : null;
+                var eurJpy = jpyEur ? (1 / jpyEur) : null;
+            var date = data.date || '';
+            card.innerHTML =
+              '<p class="fx-title">' + fxTitle + '</p>' +
+              '<div class="fx-meta">' + fxUpdated + ': ' + date + '</div>' +
+              '<div class="fx-spacer" aria-hidden="true"></div>' +
+              '<div class="fx-values">' +
+              '<div><div class="fx-label">USD/JPY</div><div>' + formatRate(usdJpy) + '</div></div>' +
+              '<div><div class="fx-label">JPY/USD</div><div>' + formatRate(jpyUsd, 6) + '</div></div>' +
+              '<div><div class="fx-label">EUR/JPY</div><div>' + formatRate(eurJpy) + '</div></div>' +
+              '<div><div class="fx-label">JPY/EUR</div><div>' + formatRate(jpyEur, 6) + '</div></div>' +
+              '</div>';
+          })
+          .catch(function () {
+            renderError();
+          });
+
+        function shiftDate(dateStr, deltaDays) {
+          var parts = dateStr.split('-');
+          if (parts.length !== 3) return dateStr;
+          var d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+          d.setUTCDate(d.getUTCDate() + deltaDays);
+          var y = d.getUTCFullYear();
+          var m = String(d.getUTCMonth() + 1).padStart(2, '0');
+          var day = String(d.getUTCDate()).padStart(2, '0');
+          return y + '-' + m + '-' + day;
+        }
+
+        function diffDigits(value) {
+          if (value === null || typeof value === 'undefined') return 3;
+          return Math.abs(value) < 1 ? 6 : 3;
+        }
+
+        function formatRate(value, digits) {
+          if (value === null || typeof value === 'undefined') return '-';
+          var d = typeof digits === 'number' ? digits : diffDigits(value);
+          return value.toFixed(d);
+        }
+      })();
+    </script>
+
+  </div>
+</body>
+</html>
+
+
+
