@@ -39,6 +39,7 @@ public class TodoService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final TodoHistoryRepository todoHistoryRepository;
+    private final AuditService auditService;
     private final AsyncTaskService asyncTaskService;
 
     /**
@@ -54,12 +55,14 @@ public class TodoService {
     public TodoService(TodoRepository todoRepository, TodoMapper todoMapper,
                        CategoryRepository categoryRepository, UserRepository userRepository,
                        TodoHistoryRepository todoHistoryRepository,
+                       AuditService auditService,
                        AsyncTaskService asyncTaskService) {
         this.todoRepository = todoRepository;
         this.todoMapper = todoMapper;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.todoHistoryRepository = todoHistoryRepository;
+        this.auditService = auditService;
         this.asyncTaskService = asyncTaskService;
     }
 
@@ -95,6 +98,7 @@ public class TodoService {
         history.setAction("CREATE");
         history.setDetail(saved.getTitle());
         todoHistoryRepository.save(history);
+        auditService.record("CREATE", "Todo created", saved.getId(), userId);
 
         asyncTaskService.sendEmail(saved.getId());
         return saved;
@@ -375,4 +379,3 @@ public class TodoService {
         return userRepository.findById(userId).orElse(null);
     }
 }
-

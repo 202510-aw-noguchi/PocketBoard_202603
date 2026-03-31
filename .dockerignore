@@ -1,0 +1,9 @@
+.git
+.idea
+.vscode
+target
+build
+out
+.VSCodeCounter
+uploads
+*.log
